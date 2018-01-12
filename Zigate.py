@@ -1,3 +1,10 @@
+## ---------
+## Read
+## ---------
+## Definition : Lire les données que la Zigate nous renvois
+## IN : Data
+## OUT : N/A
+## ---------
 def read(Data):
   Domoticz.Debug("Zigate.Read - decoded data : " + Data)
 #Trame serie
