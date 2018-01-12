@@ -5,11 +5,12 @@
 ## IN : Data
 ## OUT: Message pour debug
 ## ----
+## Initaliser par défaut tous les messages 
 for num in range(0x0,0x10000):
 	Dict_MsgData={str(hex(num))[2:6]:Unknow_Message_Type} # 
 
-## Initaliser par défaut tous les messages 
 
+## Initaliser les messages 
 Dict_MsgData={"004d":Device_Announce} # Device announce
 Dict_MsgData={"00d1":Touchlink_Status}  #
 Dict_MsgData={"8000":Status}  # Status
@@ -61,18 +62,6 @@ Dict_MsgData={"8401":Zone_Status_Change_Notification}  #
 Dict_MsgData={"8701":Router_Discovery_Confirm}  # reception Router discovery confirm
 Dict_MsgData={"8702":APS_Data_Confirm_Fail}  # APS Data Confirm Fail
 
-## Pour sous-programme Status
-for num in range(0x0,0x100):
-	MsgDataStatus={str(hex(num))[2:6]:"ZigBee Error Code "+str(hex(num))[2:6]} # 	
-	
-MsgDataStatus={"00":"Success"}
-MsgDataStatus={"01":"Incorrect Parameters"}
-MsgDataStatus={"02":"Unhandled Command"}
-MsgDataStatus={"03":"Command Failed"}
-MsgDataStatus={"04":"Busy"}
-MsgDataStatus={"05":"Stack Already Started"}
-
-
 ## ---------
 ## Read
 ## ---------
@@ -112,7 +101,8 @@ def Read(Data):
 
 	MsgRetour=Dict_MsgData[str(MsgType)](Dict_Data)
    	Domoticz.Debug("ZigateRead - MsgType "+ str(Dict_Data["MsgType"]) + " - " + MsgRetour )
-    
+	return    
+
 ## -----
 ## Unknow_Message_Type
 ## -----
@@ -131,9 +121,9 @@ def Unknow_Message_Type(Dict_Data):
 ## OUT: message for debug
 ## -----
 def Device_Announce(self,Dict_Data):
-	MsgSrcAddr=Dict_Data[MsgData][0:4]
-	MsgIEEE=Dict_Data[MsgData]MsgData[4:20]
-	MsgMacCapa=Dict_Data[MsgData]MsgData[20:22]
+	MsgSrcAddr=Dict_Data["MsgData"][0:4]
+	MsgIEEE=Dict_Data["MsgData"][4:20]
+	MsgMacCapa=Dict_Data["MsgData"][20:22]
 		
 	if DeviceExist(self, MsgSrcAddr)==False :
 		self.ListOfDevices[MsgSrcAddr]['MacCapa']=MsgMacCapa
@@ -159,9 +149,19 @@ def Touchlink_Status(self,Dict_Data):
 ## OUT: message for debug
 ## -----
 def Status(self,Dict_Data):
-	MsgDataLenght=Dict_Data{"MsgType":MsgData[0:4]}
-	MsgDataStatus=Dict_Data{"MsgType":MsgData[4:6]}
-	MsgDataSQN=Dict_Data{"MsgType":MsgData[6:8]}
+	for num in range(0x0,0x100):
+		MsgDataStatus={str(hex(num))[2:6]:"ZigBee Error Code "+str(hex(num))[2:6]} # 	
+	
+	MsgDataStatus={"00":"Success"}
+	MsgDataStatus={"01":"Incorrect Parameters"}
+	MsgDataStatus={"02":"Unhandled Command"}
+	MsgDataStatus={"03":"Command Failed"}
+	MsgDataStatus={"04":"Busy"}
+	MsgDataStatus={"05":"Stack Already Started"}
+
+	MsgDataLenght=Dict_Data["MsgData"][0:4]
+	MsgDataStatus=Dict_Data["MsgData"][4:6]
+	MsgDataSQN=Dict_Data["MsgData"][6:8]
 
 	if int(MsgDataLenght,16) > 2 :
 		MsgDataMessage=Dict_Data{"MsgType":MsgData[8:len(MsgData)]}
@@ -178,8 +178,8 @@ def Status(self,Dict_Data):
 ## OUT: message for debug
 ## -----
 def Log(self,Dict_Data):
-	MsgLogLvl=MsgData[0:2]
-	MsgDataMessage=MsgData[2:len(MsgData)]
+	MsgLogLvl=Dict_Data["MsgData"][0:2]
+	MsgDataMessage=Dict_Data["MsgData"][2:len(Dict_Data["MsgData"])]
 	
 	return("Reception log Level 0x: " + MsgLogLvl + "Message : " + MsgDataMessage)
 
