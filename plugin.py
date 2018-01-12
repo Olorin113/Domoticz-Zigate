@@ -37,6 +37,26 @@ import binascii
 import time
 import Zigate
 
+## ---
+## Initialisation du dictionnaire TypeFromCluster
+## ---
+def TypeFromCluster(cluster):
+	for num in range(0x0,0x10000):
+		TypeFromCluster={str(hex(num))[2:6]:""} # 
+		
+	TypeFromCluster={"0405":"Humi"}
+	TypeFromCluster={"0406":"Motion"}
+	TypeFromCluster={"0400":"Lux"}
+	TypeFromCluster={"0403":"Baro"}
+	TypeFromCluster={"0402":"Temp"}
+	TypeFromCluster={"0006":"Switch"}
+	TypeFromCluster={"0500":"Door"}
+	TypeFromCluster={"0012":"XCube"}
+	TypeFromCluster={"000c":"XCube"}
+
+## ---
+## Plugin
+## ---
 class BasePlugin:
 	enabled = False
 
@@ -88,7 +108,7 @@ class BasePlugin:
 			Domoticz.Log("Connected successfully")
 			if Parameters["Mode3"] == "True":
 			################### ZiGate - ErasePD ##################
-				sendZigateCmd("0012","0000", "")
+				Zigate.SendCmd("0012","0000", "")
 			Zigate.Conf()
 		else:
 			Domoticz.Log("Failed to connect ("+str(Status)+")")
@@ -104,11 +124,11 @@ class BasePlugin:
 			ReqRcv+=Tmprcv[:Tmprcv.find('03')+2] #
 			#try :
 			if ReqRcv.find("0301") == -1 : #verifie si pas deux messages coller ensemble
-				ZigateDecode(self, ReqRcv) #demande de decodage de la trame recu
+				Zigate.Decode(self, ReqRcv) #demande de decodage de la trame recu
 				ReqRcv=Tmprcv[Tmprcv.find('03')+2:]  # traite la suite du tampon
 			else : 
-				ZigateDecode(self, ReqRcv[:ReqRcv.find("0301")+2])
-				ZigateDecode(self, ReqRcv[ReqRcv.find("0301")+2:])
+				Zigate.Decode(self, ReqRcv[:ReqRcv.find("0301")+2])
+				Zigate.Decode(self, ReqRcv[ReqRcv.find("0301")+2:])
 				ReqRcv=Tmprcv[Tmprcv.find('03')+2:]
 			#except :
 			#	Domoticz.Debug("onMessage - effacement de la trame suite a une erreur de decodage : " + ReqRcv)
@@ -135,7 +155,7 @@ class BasePlugin:
 			self.ListOfDevices[key]['Heartbeat']=str(int(self.ListOfDevices[key]['Heartbeat'])+1)
 			# Envoi une demande Active Endpoint request
 			if status=="004d" and self.ListOfDevices[key]['Heartbeat']=="1":
-				sendZigateCmd("0045","0002", str(key))
+				Zigate.SendCmd("0045","0002", str(key))
 				self.ListOfDevices[key]['Status']="0045"
 				self.ListOfDevices[key]['Heartbeat']="0"
 			if status=="004d" and self.ListOfDevices[key]['Heartbeat']>="10":
@@ -147,7 +167,7 @@ class BasePlugin:
 			if status=="8045" and self.ListOfDevices[key]['Heartbeat']=="1":
 				for cle in self.ListOfDevices[key]['Ep']:
 					Domoticz.Debug("Envoie une demande Simple Descriptor request pour avoir les informations du EP :" + cle + ", du device adresse : " + key)
-					sendZigateCmd("0043","0004", str(key)+str(cle))
+					Zigate.SendCmd("0043","0004", str(key)+str(cle))
 				self.ListOfDevices[key]['Status']="0043"
 				self.ListOfDevices[key]['Heartbeat']="0"
 			if status=="8045" and self.ListOfDevices[key]['Heartbeat']>="10":
@@ -225,74 +245,6 @@ def DumpConfigToLog():
 		Domoticz.Debug("Device options: " + str(Devices[x].Options))
 	return
 
-def ZigateDecode(self, Data):  # supprime le transcodage
-	Domoticz.Debug("ZigateDecode - decodind data : " + Data)
-	Out=""
-	Outtmp=""
-	Transcode = False
-	for c in Data :
-		Outtmp+=c
-		if len(Outtmp)==2 :
-			if Outtmp == "02" :
-				Transcode=True
-			else :
-				if Transcode == True:
-					Transcode = False
-					if Outtmp[0]=="1" :
-						Out+="0"
-					else :
-						Out+="1"
-					Out+=Outtmp[1]
-					#Out+=str(int(str(Outtmp)) - 10)
-				else :
-					Out+=Outtmp
-			Outtmp=""
-	Zigate.Read(self, Out)
-
-def ZigateEncode(Data):  # ajoute le transcodage
-	Domoticz.Debug("ZigateDecode - Encodind data : " + Data)
-	Out=""
-	Outtmp=""
-	Transcode = False
-	for c in Data :
-		Outtmp+=c
-		if len(Outtmp)==2 :
-			if Outtmp[0] == "1" :
-				if Outtmp[1] == "0" :
-					Outtmp="0200"
-					Out+=Outtmp
-				else :
-					Out+=Outtmp
-			elif Outtmp[0] == "0" :
-				Out+="021" + Outtmp[1]
-			else :
-				Out+=Outtmp
-			Outtmp=""
-	Domoticz.Debug("Transcode in : " + str(Data) + "  / out :" + str(Out) )
-	return Out
-
-def sendZigateCmd(cmd,length,datas) :
-	if datas =="" :
-		checksumCmd=getChecksum(cmd,length,"0")
-		if len(checksumCmd)==1 :
-			strchecksum="0" + str(checksumCmd)
-		else :
-			strchecksum=checksumCmd
-		lineinput="01" + str(ZigateEncode(cmd)) + str(ZigateEncode(length)) + str(strchecksum) + "03" 
-	else :
-		checksumCmd=getChecksum(cmd,length,datas)
-		if len(checksumCmd)==1 :
-			strchecksum="0" + str(checksumCmd)
-		else :
-			strchecksum=checksumCmd
-		lineinput="01" + str(ZigateEncode(cmd)) + str(ZigateEncode(length)) + str(strchecksum) + str(ZigateEncode(datas)) + "03"   
-	Domoticz.Debug("sendZigateCmd - Comand send : " + str(lineinput))
-	if Parameters["Mode1"] == "USB":
-		ZigateConn.Send(bytes.fromhex(str(lineinput)))	
-	if Parameters["Mode1"] == "Wifi":
-		ZigateConn.Send(bytes.fromhex(str(lineinput))+bytes("\r\n",'utf-8'))
-
-
 def CheckType(self, MsgSrcAddr) :
 	Domoticz.Debug("CheckType of device : " + MsgSrcAddr)
 	x=0
@@ -313,29 +265,6 @@ def GetType(self, Addr, Ep) :
 		for cluster in self.ListOfDevices[Addr]['Ep'][Ep] :
 			if Type != "" and Type[:1]!="/" :
 				Type+="/"
-			Type+=TypeFromCluster(cluster)
+			Type+=TypeFromCluster[cluster]
 		self.ListOfDevices[Addr]['Type']=Type
 	return Type
-
-def TypeFromCluster(cluster):
-	if cluster=="0405" :
-		TypeFromCluster="Humi"
-	elif cluster=="0406" :
-		TypeFromCluster="Motion"
-	elif cluster=="0400" :
-		TypeFromCluster="Lux"
-	elif cluster=="0403" :
-		TypeFromCluster="Baro"
-	elif cluster=="0402" :
-		TypeFromCluster="Temp"
-	elif cluster=="0006" :
-		TypeFromCluster="Switch"
-	elif cluster=="0500" :
-		TypeFromCluster="Door"
-	elif cluster=="0012" :
-		TypeFromCluster="XCube"
-	elif cluster=="000c" :
-		TypeFromCluster="XCube"
-	else :
-		TypeFromCluster=""
-	return TypeFromCluster
