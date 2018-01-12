@@ -89,7 +89,7 @@ class BasePlugin:
 			if Parameters["Mode3"] == "True":
 			################### ZiGate - ErasePD ##################
 				sendZigateCmd("0012","0000", "")
-			ZigateConf()
+			Zigate.Conf()
 		else:
 			Domoticz.Log("Failed to connect ("+str(Status)+")")
 			Domoticz.Debug("Failed to connect ("+str(Status)+") with error: "+Description)
@@ -224,21 +224,6 @@ def DumpConfigToLog():
 		Domoticz.Debug("Device LastLevel: " + str(Devices[x].LastLevel))
 		Domoticz.Debug("Device options: " + str(Devices[x].Options))
 	return
-
-
-def ZigateConf():
-
-	################### ZiGate - set channel 11 ##################
-	sendZigateCmd("0021","0004", "00000B00")
-
-	################### ZiGate - Set Type COORDINATOR#################
-	sendZigateCmd("0023","0001","00")
-	
-	################### ZiGate - start network##################
-	sendZigateCmd("0024","0000","")
-
-	################### ZiGate - discover mode 255sec ##################
-	sendZigateCmd("0049","0004","FFFC" + hex(int(Parameters["Mode2"]))[2:4] + "00")
 
 def ZigateDecode(self, Data):  # supprime le transcodage
 	Domoticz.Debug("ZigateDecode - decodind data : " + Data)
