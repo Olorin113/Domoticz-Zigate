@@ -36,7 +36,7 @@ import Domoticz
 import binascii
 import time
 import Zigate
-import Devices
+import DevicesDomo
 
 ##---
 ## Initialisation du dictionnaire TypeFromCluster
@@ -184,7 +184,7 @@ class BasePlugin:
 						Domoticz.Debug("HearBeat - Devices already exist. Unit=" + str(x))
 				if IsCreated == False :
 					Domoticz.Debug("HearBeat - creating device id : " + str(key))
-					Devices.Create(self, key)
+					DevicesDomo.Create(self, key)
 
 
 		ResetDevice("Motion",5)
