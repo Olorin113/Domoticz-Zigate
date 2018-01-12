@@ -62,6 +62,116 @@ Dict_MsgData={"8401":Zone_Status_Change_Notification}  #
 Dict_MsgData={"8701":Router_Discovery_Confirm}  # reception Router discovery confirm
 Dict_MsgData={"8702":APS_Data_Confirm_Fail}  # APS Data Confirm Fail
 
+
+## ---------
+## Conf
+## ---------
+## Definition : Configuration de la Zigate
+## IN : N/A
+## OUT : N/A
+## ---------
+def Conf():
+	Domoticz.Debug("Zigate.Conf - Set Channel, type coordinator, start network, discover mode")
+	################### ZiGate - set channel 11 ##################
+	SendCmd("0021","0004", "00000B00")
+	
+	################### ZiGate - Set Type COORDINATOR#################
+	SendCmd("0023","0001","00")
+	
+	################### ZiGate - start network##################
+	SendCmd("0024","0000","")
+
+	################### ZiGate - discover mode 255sec ##################
+	SendCmd("0049","0004","FFFC" + hex(int(Parameters["Mode2"]))[2:4] + "00")
+
+## ---------
+## Decode
+## ---------
+## Definition : supprime le transcodage pour décoder la trame encoyé par la Zigate
+## IN : Data
+## OUT : N/A
+## ---------		
+def Decode(self,Data):  # ajoute le transcodage
+	Domoticz.Debug("Zigate.Decode - decodind data : " + Data)
+	Out=""
+	Outtmp=""
+	Transcode = False
+	for c in Data :
+		Outtmp+=c
+		if len(Outtmp)==2 :
+			if Outtmp == "02" :
+				Transcode=True
+			else :
+				if Transcode == True:
+					Transcode = False
+					if Outtmp[0]=="1" :
+						Out+="0"
+					else :
+						Out+="1"
+					Out+=Outtmp[1]
+					#Out+=str(int(str(Outtmp)) - 10)
+				else :
+					Out+=Outtmp
+			Outtmp=""
+	Zigate.Read(self, Out)
+
+## ---------
+## Encode
+## ---------
+## Definition : ajoute le transcodage avant d'envoyer à la Zigate
+## IN : Data
+## OUT : N/A
+## ---------		
+def Encode(Data):  # ajoute le transcodage
+	Domoticz.Debug("Zigate.Encode - Encodind data : " + Data)
+	Out=""
+	Outtmp=""
+	Transcode = False
+	for c in Data :
+		Outtmp+=c
+		if len(Outtmp)==2 :
+			if Outtmp[0] == "1" :
+				if Outtmp[1] == "0" :
+					Outtmp="0200"
+					Out+=Outtmp
+				else :
+					Out+=Outtmp
+			elif Outtmp[0] == "0" :
+				Out+="021" + Outtmp[1]
+			else :
+				Out+=Outtmp
+			Outtmp=""
+	Domoticz.Debug("Transcode in : " + str(Data) + "  / out :" + str(Out) )
+	return Out
+
+## ---------
+## SendCmd
+## ---------
+## Definition : envoyer une commande à la Zigate
+## IN : Commande longueur donnée
+## OUT : N/A
+## ---------
+def SendCmd(ZigateConn,cmd,length,datas) :
+	if datas =="" :
+		checksumCmd=getChecksum(cmd,length,"0")
+		if len(checksumCmd)==1 :
+			strchecksum="0" + str(checksumCmd)
+		else :
+			strchecksum=checksumCmd
+		lineinput="01" + str(Encode(cmd)) + str(Encode(length)) + str(strchecksum) + "03" 
+	else :
+		checksumCmd=getChecksum(cmd,length,datas)
+		if len(checksumCmd)==1 :
+			strchecksum="0" + str(checksumCmd)
+		else :
+			strchecksum=checksumCmd
+		lineinput="01" + str(Encode(cmd)) + str(Encode(length)) + str(strchecksum) + str(Encode(datas)) + "03"   
+	Domoticz.Debug("Zigate.SendCmd - Comand send : " + str(lineinput))
+	if Parameters["Mode1"] == "USB":
+		ZigateConn.Send(bytes.fromhex(str(lineinput)))	
+	if Parameters["Mode1"] == "Wifi":
+		ZigateConn.Send(bytes.fromhex(str(lineinput))+bytes("\r\n",'utf-8'))
+
 ## ---------
 ## Read
 ## ---------
